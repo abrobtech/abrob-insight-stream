@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
+import { Loader } from '@googlemaps/js-api-loader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,10 +29,10 @@ interface MapProps {
 
 export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const map = useRef<google.maps.Map | null>(null);
+  const [googleMapsKey, setGoogleMapsKey] = useState<string>('');
   const [showTokenInput, setShowTokenInput] = useState(true);
-  const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const markers = useRef<{ [key: string]: google.maps.Marker }>({});
 
   const initializeMap = () => {
     if (!mapContainer.current || !mapboxToken) return;

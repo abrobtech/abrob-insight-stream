@@ -8,6 +8,13 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import AuthPage from "./components/auth/AuthPage";
 import NotFound from "./pages/NotFound";
+import Devices from "./pages/Devices";
+import Patterns from "./pages/Patterns";
+import Alerts from "./pages/Alerts";
+import Geofences from "./pages/Geofences";
+import History from "./pages/History";
+import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +40,13 @@ function AppContent() {
         <>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/devices" element={<Devices />} />
+          <Route path="/patterns" element={<Patterns />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/geofences" element={<Geofences />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/profile" element={<Profile />} />
         </>
       ) : (
         <>

@@ -1,0 +1,281 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import Header from '@/components/layout/Header';
+import Sidebar from '@/components/layout/Sidebar';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { MapPin, Plus, Edit, Trash2, Shield } from 'lucide-react';
+
+interface Geofence {
+  id: string;
+  name: string;
+  owner_id: string;
+  polygon: any;
+  active: boolean;
+  on_enter: string;
+  on_exit: string;
+  created_at: string;
+  device_count: number;
+}
+
+export default function Geofences() {
+  const { user } = useAuth();
+  const [geofences, setGeofences] = useState<Geofence[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newGeofence, setNewGeofence] = useState({
+    name: '',
+    on_enter: 'alert',
+    on_exit: 'alert'
+  });
+
+  // Sample geofences data
+  const sampleGeofences: Geofence[] = [
+    {
+      id: '1',
+      name: 'Home Zone',
+      owner_id: user?.id || '',
+      polygon: { type: 'polygon', coordinates: [[0, 0]] },
+      active: true,
+      on_enter: 'notify',
+      on_exit: 'alert',
+      created_at: new Date().toISOString(),
+      device_count: 2
+    },
+    {
+      id: '2',
+      name: 'Office Area',
+      owner_id: user?.id || '',
+      polygon: { type: 'polygon', coordinates: [[0, 0]] },
+      active: true,
+      on_enter: 'log',
+      on_exit: 'notify',
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      device_count: 3
+    },
+    {
+      id: '3',
+      name: 'Restricted Zone',
+      owner_id: user?.id || '',
+      polygon: { type: 'polygon', coordinates: [[0, 0]] },
+      active: false,
+      on_enter: 'alert',
+      on_exit: 'log',
+      created_at: new Date(Date.now() - 172800000).toISOString(),
+      device_count: 1
+    }
+  ];
+
+  useEffect(() => {
+    setGeofences(sampleGeofences);
+    setLoading(false);
+  }, [user]);
+
+  const handleToggleActive = (geofenceId: string) => {
+    setGeofences(prev => prev.map(geo => 
+      geo.id === geofenceId ? { ...geo, active: !geo.active } : geo
+    ));
+  };
+
+  const handleCreateGeofence = () => {
+    const newGeo: Geofence = {
+      id: Date.now().toString(),
+      name: newGeofence.name,
+      owner_id: user?.id || '',
+      polygon: { type: 'polygon', coordinates: [[0, 0]] },
+      active: true,
+      on_enter: newGeofence.on_enter,
+      on_exit: newGeofence.on_exit,
+      created_at: new Date().toISOString(),
+      device_count: 0
+    };
+    
+    setGeofences(prev => [newGeo, ...prev]);
+    setNewGeofence({ name: '', on_enter: 'alert', on_exit: 'alert' });
+    setShowCreateForm(false);
+  };
+
+  const getActionColor = (action: string) => {
+    switch (action) {
+      case 'alert': return 'text-red-600';
+      case 'notify': return 'text-yellow-600';
+      case 'log': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col">
+      <Header alertsCount={0} onAlertsClick={() => {}} />
+      
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          activeItem="geofences"
+          onItemClick={() => {}}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+        
+        <div className="flex-1 p-6 overflow-auto">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Shield className="w-8 h-8 text-primary" />
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground">Geofences & Rules</h1>
+                  <p className="text-muted-foreground">Create virtual boundaries and automated responses</p>
+                </div>
+              </div>
+              
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Geofence
+              </Button>
+            </div>
+
+            {showCreateForm && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Create New Geofence</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="name">Geofence Name</Label>
+                    <Input
+                      id="name"
+                      value={newGeofence.name}
+                      onChange={(e) => setNewGeofence(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter geofence name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="on_enter">On Enter Action</Label>
+                    <select
+                      id="on_enter"
+                      value={newGeofence.on_enter}
+                      onChange={(e) => setNewGeofence(prev => ({ ...prev, on_enter: e.target.value }))}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="alert">Send Alert</option>
+                      <option value="notify">Send Notification</option>
+                      <option value="log">Log Event</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="on_exit">On Exit Action</Label>
+                    <select
+                      id="on_exit"
+                      value={newGeofence.on_exit}
+                      onChange={(e) => setNewGeofence(prev => ({ ...prev, on_exit: e.target.value }))}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="alert">Send Alert</option>
+                      <option value="notify">Send Notification</option>
+                      <option value="log">Log Event</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2 mt-4">
+                  <Button onClick={handleCreateGeofence} disabled={!newGeofence.name}>
+                    Create Geofence
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {geofences.map((geofence) => (
+                <Card key={geofence.id} className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-full ${geofence.active ? 'bg-green-100' : 'bg-gray-100'}`}>
+                        <MapPin className={`w-5 h-5 ${geofence.active ? 'text-green-600' : 'text-gray-600'}`} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{geofence.name}</h3>
+                        <Badge variant={geofence.active ? 'default' : 'secondary'}>
+                          {geofence.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <Switch
+                      checked={geofence.active}
+                      onCheckedChange={() => handleToggleActive(geofence.id)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Devices</span>
+                      <span className="font-medium">{geofence.device_count}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">On Enter</span>
+                      <span className={`font-medium capitalize ${getActionColor(geofence.on_enter)}`}>
+                        {geofence.on_enter}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">On Exit</span>
+                      <span className={`font-medium capitalize ${getActionColor(geofence.on_exit)}`}>
+                        {geofence.on_exit}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Created: {new Date(geofence.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2 mt-4">
+                    <Button size="sm" variant="outline" className="flex-1">
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {geofences.length === 0 && (
+              <Card className="p-12 text-center">
+                <MapPin className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Geofences Created</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create your first geofence to set up virtual boundaries and automated responses.
+                </p>
+                <Button onClick={() => setShowCreateForm(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Geofence
+                </Button>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
