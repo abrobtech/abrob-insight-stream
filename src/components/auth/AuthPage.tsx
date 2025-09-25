@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useFirebaseAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Shield, Zap, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,27 +15,15 @@ export default function AuthPage() {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { signIn, signUp } = useAuth();
 
   const handleSignUp = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
-        },
-      });
-
-      if (error) throw error;
-
+      await signUp(email, password, { firstName, lastName });
       toast({
         title: "Account created!",
-        description: "Please check your email to verify your account.",
+        description: "Welcome to ABROB-GT!",
       });
     } catch (error: any) {
       toast({
@@ -52,13 +39,7 @@ export default function AuthPage() {
   const handleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+      await signIn(email, password);
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
