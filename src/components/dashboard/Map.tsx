@@ -34,87 +34,54 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
   const [showTokenInput, setShowTokenInput] = useState(true);
   const markers = useRef<{ [key: string]: google.maps.Marker }>({});
 
-  const initializeMap = () => {
-    if (!mapContainer.current || !mapboxToken) return;
+  const initializeMap = async () => {
+    if (!mapContainer.current || !googleMapsKey) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      center: [-74.006, 40.7128],
-      zoom: 12,
-      projection: 'globe' as any,
-    });
-
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        visualizePitch: true,
-      }),
-      'top-right'
-    );
-
-    map.current.on('style.load', () => {
-      map.current?.setFog({
-        color: 'rgb(255, 255, 255)',
-        'high-color': 'rgb(200, 200, 225)',
-        'horizon-blend': 0.2,
+    try {
+      const loader = new Loader({
+        apiKey: googleMapsKey,
+        version: 'weekly',
       });
-    });
 
-    setShowTokenInput(false);
+      await loader.load();
+
+      map.current = new google.maps.Map(mapContainer.current, {
+        center: { lat: 40.7128, lng: -74.0060 },
+        zoom: 12,
+      });
+
+      setShowTokenInput(false);
+    } catch (error) {
+      console.error('Error loading Google Maps:', error);
+    }
   };
 
   const createDeviceMarker = (device: Device) => {
-    const el = document.createElement('div');
-    el.className = 'device-marker';
-    el.style.cssText = `
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: ${getStatusColor(device)};
-      border: 3px solid white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    `;
+    if (!map.current || !device.latitude || !device.longitude) return null;
 
-    if (device.status === 'online') {
-      el.style.animation = 'pulse-glow 2s ease-in-out infinite';
-    }
+    const marker = new google.maps.Marker({
+      position: { lat: device.latitude, lng: device.longitude },
+      map: map.current,
+      title: device.name,
+    });
 
-    el.innerHTML = `<div style="color: white; font-size: 12px; font-weight: bold;">${Math.round(device.battery_percentage)}%</div>`;
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <div style="padding: 10px;">
+          <h3 style="margin: 0 0 10px 0;">${device.name}</h3>
+          <p><strong>Status:</strong> <span style="color: ${getStatusColor(device)}">${device.status}</span></p>
+          <p><strong>Battery:</strong> ${device.battery_percentage}%</p>
+          <p><strong>Speed:</strong> ${device.speed || 0} mph</p>
+          ${device.tamper_status ? '<p style="color: red;"><strong>⚠️ Tamper Alert</strong></p>' : ''}
+          ${device.jamming_status ? '<p style="color: orange;"><strong>📡 Jamming Detected</strong></p>' : ''}
+        </div>
+      `,
+    });
 
-    const marker = new mapboxgl.Marker(el)
-      .setLngLat([device.longitude, device.latitude])
-      .setPopup(
-        new mapboxgl.Popup({ offset: 25 }).setHTML(`
-          <div class="p-3 min-w-[200px]">
-            <h3 class="font-bold text-lg mb-2">${device.name}</h3>
-            <div class="space-y-1 text-sm">
-              <div class="flex justify-between">
-                <span>Status:</span>
-                <span class="font-semibold" style="color: ${getStatusColor(device)}">${device.status}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Battery:</span>
-                <span class="font-semibold">${device.battery_percentage}%</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Speed:</span>
-                <span class="font-semibold">${device.speed} mph</span>
-              </div>
-              ${device.tamper_status ? '<div class="text-red-600 font-bold">⚠️ Tamper Alert</div>' : ''}
-              ${device.jamming_status ? '<div class="text-orange-600 font-bold">📡 Jamming Detected</div>' : ''}
-            </div>
-          </div>
-        `)
-      );
-
-    el.onclick = () => onDeviceSelect?.(device);
+    marker.addListener('click', () => {
+      infoWindow.open(map.current, marker);
+      onDeviceSelect?.(device);
+    });
 
     return marker;
   };
@@ -133,33 +100,24 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
     if (!map.current || !devices.length) return;
 
     // Clear existing markers
-    Object.values(markers.current).forEach(marker => marker.remove());
+    Object.values(markers.current).forEach(marker => marker.setMap(null));
     markers.current = {};
 
     // Add new markers
     devices.forEach(device => {
-      const marker = createDeviceMarker(device);
-      marker.addTo(map.current!);
-      markers.current[device.id] = marker;
+      if (device.latitude && device.longitude) {
+        const marker = createDeviceMarker(device);
+        if (marker) {
+          markers.current[device.id] = marker;
+        }
+      }
     });
-
-    // Fit map to show all devices
-    if (devices.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      devices.forEach(device => {
-        bounds.extend([device.longitude, device.latitude]);
-      });
-      map.current.fitBounds(bounds, { padding: 50 });
-    }
   }, [devices, onDeviceSelect]);
 
   useEffect(() => {
-    if (selectedDevice && map.current) {
-      map.current.flyTo({
-        center: [selectedDevice.longitude, selectedDevice.latitude],
-        zoom: 15,
-        duration: 1000,
-      });
+    if (selectedDevice && map.current && selectedDevice.latitude && selectedDevice.longitude) {
+      map.current.setCenter({ lat: selectedDevice.latitude, lng: selectedDevice.longitude });
+      map.current.setZoom(15);
     }
   }, [selectedDevice]);
 
@@ -169,28 +127,22 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
         <div className="max-w-md w-full space-y-4">
           <div className="text-center space-y-2">
             <MapPin className="w-12 h-12 text-primary mx-auto" />
-            <h3 className="text-lg font-semibold">Setup Map Integration</h3>
+            <h3 className="text-lg font-semibold">Setup Google Maps</h3>
             <p className="text-sm text-muted-foreground">
-              Enter your Mapbox public token to enable real-time tracking
+              Enter your Google Maps API key to enable real-time tracking
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="mapbox-token">Mapbox Public Token</Label>
+            <Label htmlFor="google-maps-key">Google Maps API Key</Label>
             <Input
-              id="mapbox-token"
+              id="google-maps-key"
               type="password"
-              placeholder="pk.eyJ1..."
-              value={mapboxToken}
-              onChange={(e) => setMapboxToken(e.target.value)}
+              placeholder="AIza..."
+              value={googleMapsKey}
+              onChange={(e) => setGoogleMapsKey(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Get your token from{' '}
-              <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                mapbox.com
-              </a>
-            </p>
           </div>
-          <Button onClick={initializeMap} disabled={!mapboxToken} className="w-full">
+          <Button onClick={initializeMap} disabled={!googleMapsKey} className="w-full">
             Initialize Map
           </Button>
         </div>
@@ -198,19 +150,5 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
     );
   }
 
-  return (
-    <div className="relative h-full w-full rounded-lg overflow-hidden">
-      <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute top-4 left-4 flex space-x-2">
-        <Button size="sm" variant="secondary" className="bg-white/90 backdrop-blur-sm">
-          <Layers className="w-4 h-4 mr-2" />
-          Satellite
-        </Button>
-        <Button size="sm" variant="secondary" className="bg-white/90 backdrop-blur-sm">
-          <Navigation className="w-4 h-4 mr-2" />
-          Traffic
-        </Button>
-      </div>
-    </div>
-  );
+  return <div ref={mapContainer} className="w-full h-full" />;
 }

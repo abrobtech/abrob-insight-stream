@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import GoogleMap from '@/components/dashboard/GoogleMap';
+import Map from '@/components/dashboard/Map';
 import DevicesSidebar from '@/components/dashboard/DevicesSidebar';
 import { useToast } from '@/hooks/use-toast';
 
@@ -230,7 +230,7 @@ export default function Dashboard() {
           />
           
           <div className="flex-1 relative">
-            <GoogleMap
+            <Map
               devices={devices.filter(d => d.latitude && d.longitude)}
               selectedDevice={selectedDevice}
               onDeviceSelect={handleDeviceSelect}
