@@ -3,13 +3,13 @@ import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  apiKey: "AIzaSyB5nXV5nGM0I3c9P7pAjJoeWJ9TctXHp_k",
+  authDomain: "abrob-gt1.firebaseapp.com",
+  databaseURL: "https://abrob-gt1-default-rtdb.firebaseio.com/",
+  projectId: "abrob-gt1",
+  storageBucket: "abrob-gt1.firebasestorage.app",
+  messagingSenderId: "339885770339",
+  appId: "1:339885770339:web:fb5eeff3186542a4705a56"
 };
 
 const app = initializeApp(firebaseConfig);
