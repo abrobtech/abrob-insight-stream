@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Map from '@/components/dashboard/Map';
@@ -46,7 +46,7 @@ export default function Dashboard() {
       id: '1',
       imei: 'GT-001-2024',
       name: 'Fleet Vehicle A1',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date().toISOString(),
       battery_percentage: 85,
       tamper_status: false,
@@ -60,7 +60,7 @@ export default function Dashboard() {
       id: '2',
       imei: 'GT-002-2024',
       name: 'Personal Vehicle',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date(Date.now() - 300000).toISOString(),
       battery_percentage: 15,
       tamper_status: true,
@@ -74,7 +74,7 @@ export default function Dashboard() {
       id: '3',
       imei: 'GT-003-2024',
       name: 'Delivery Truck B2',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date(Date.now() - 1800000).toISOString(),
       battery_percentage: 67,
       tamper_status: false,
@@ -88,7 +88,7 @@ export default function Dashboard() {
       id: '4',
       imei: 'GT-004-2024',
       name: 'Asset Tracker X1',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date().toISOString(),
       battery_percentage: 92,
       tamper_status: false,
@@ -102,7 +102,7 @@ export default function Dashboard() {
       id: '5',
       imei: 'GT-005-2024',
       name: 'Equipment Monitor',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date(Date.now() - 600000).toISOString(),
       battery_percentage: 38,
       tamper_status: false,
@@ -114,50 +114,15 @@ export default function Dashboard() {
     }
   ];
 
+  const { gpsData } = useGPSData();
+
   useEffect(() => {
     // Load devices (using sample data for now)
     setDevices(sampleDevices);
     setSelectedDevice(sampleDevices[0]);
     setLoading(false);
 
-    // Set up realtime subscriptions
-    const devicesChannel = supabase
-      .channel('devices-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'devices'
-        },
-        (payload) => {
-          console.log('Device change:', payload);
-          // Handle device updates
-        }
-      )
-      .subscribe();
-
-    const locationsChannel = supabase
-      .channel('locations-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'locations'
-        },
-        (payload) => {
-          console.log('Location update:', payload);
-          // Handle location updates
-          handleLocationUpdate(payload.new as Location);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(devicesChannel);
-      supabase.removeChannel(locationsChannel);
-    };
+    // Firebase realtime listeners will be handled by useGPSData hook
   }, [user]);
 
   const handleLocationUpdate = (location: Location) => {
