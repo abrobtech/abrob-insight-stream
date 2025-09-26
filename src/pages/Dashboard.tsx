@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
@@ -6,6 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Map from '@/components/dashboard/Map';
 import DevicesSidebar from '@/components/dashboard/DevicesSidebar';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Activity, Battery, Shield, MapPin } from 'lucide-react';
 
 interface Device {
   id: string;
@@ -33,6 +37,7 @@ interface Location {
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -154,7 +159,12 @@ export default function Dashboard() {
   };
 
   const handleAlertsClick = () => {
-    setActiveView('alerts');
+    navigate('/alerts');
+  };
+
+  const handleNavigation = (itemId: string) => {
+    setActiveView(itemId);
+    navigate(`/${itemId === 'dashboard' ? '' : itemId}`);
   };
 
   if (loading) {
@@ -181,7 +191,7 @@ export default function Dashboard() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem={activeView}
-          onItemClick={setActiveView}
+          onItemClick={handleNavigation}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
@@ -194,12 +204,113 @@ export default function Dashboard() {
             onToggleCollapse={() => setDevicesSidebarCollapsed(!devicesSidebarCollapsed)}
           />
           
-          <div className="flex-1 relative">
-            <Map
-              devices={devices.filter(d => d.latitude && d.longitude)}
-              selectedDevice={selectedDevice}
-              onDeviceSelect={handleDeviceSelect}
-            />
+          <div className="flex-1 flex flex-col">
+            {/* Dashboard Stats */}
+            <div className="p-6 space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold gradient-text">Dashboard Overview</h1>
+                <p className="text-muted-foreground mt-2">Monitor your fleet and devices in real-time</p>
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Devices</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{devices.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {devices.filter(d => d.status === 'online').length} online
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-destructive">{getAlertsCount()}</div>
+                    <p className="text-xs text-muted-foreground">Require attention</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Low Battery</CardTitle>
+                    <Battery className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-warning">
+                      {devices.filter(d => d.battery_percentage < 20).length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Below 20%</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Tracking</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-success">
+                      {devices.filter(d => d.latitude && d.longitude).length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">GPS enabled</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Alerts */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Alerts</CardTitle>
+                  <CardDescription>Latest alerts and incidents from your devices</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {devices
+                      .filter(device => device.tamper_status || device.jamming_status || device.battery_percentage < 20)
+                      .slice(0, 3)
+                      .map(device => (
+                        <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-2 h-2 bg-destructive rounded-full" />
+                            <div>
+                              <p className="font-medium">{device.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {device.tamper_status && "Tamper detected"}
+                                {device.jamming_status && "Signal jamming"}
+                                {device.battery_percentage < 20 && `Low battery: ${device.battery_percentage}%`}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="destructive">Alert</Badge>
+                        </div>
+                      ))}
+                    {devices.filter(device => device.tamper_status || device.jamming_status || device.battery_percentage < 20).length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No active alerts</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Map Section */}
+            <div className="flex-1 min-h-[400px] relative">
+              <Map
+                devices={devices.filter(d => d.latitude && d.longitude)}
+                selectedDevice={selectedDevice}
+                onDeviceSelect={handleDeviceSelect}
+              />
+            </div>
           </div>
         </div>
       </div>
