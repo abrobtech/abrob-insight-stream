@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -33,6 +34,7 @@ interface SystemLog {
 
 export default function Admin() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -148,7 +150,7 @@ export default function Admin() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="admin"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         

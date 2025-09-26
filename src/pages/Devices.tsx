@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -24,6 +25,7 @@ interface Device {
 export default function Devices() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<Device[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -108,7 +110,7 @@ export default function Devices() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="devices"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         

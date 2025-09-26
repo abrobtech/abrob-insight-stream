@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -26,6 +27,7 @@ interface Alert {
 
 export default function Alerts() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -177,7 +179,7 @@ export default function Alerts() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="alerts"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         

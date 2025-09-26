@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -27,6 +28,7 @@ interface Trip {
 
 export default function History() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('all');
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
@@ -127,7 +129,7 @@ export default function History() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="history"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         

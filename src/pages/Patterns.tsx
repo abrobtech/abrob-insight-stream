@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -22,6 +23,7 @@ const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
 export default function Patterns() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,7 @@ export default function Patterns() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="patterns"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         

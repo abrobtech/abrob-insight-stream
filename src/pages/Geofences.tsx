@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -24,6 +25,7 @@ interface Geofence {
 
 export default function Geofences() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -125,7 +127,7 @@ export default function Geofences() {
         <Sidebar
           collapsed={sidebarCollapsed}
           activeItem="geofences"
-          onItemClick={() => {}}
+          onItemClick={(itemId) => navigate(`/${itemId === 'dashboard' ? '' : itemId}`)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
