@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -39,7 +39,7 @@ export default function Geofences() {
     {
       id: '1',
       name: 'Home Zone',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       polygon: { type: 'polygon', coordinates: [[0, 0]] },
       active: true,
       on_enter: 'notify',
@@ -50,7 +50,7 @@ export default function Geofences() {
     {
       id: '2',
       name: 'Office Area',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       polygon: { type: 'polygon', coordinates: [[0, 0]] },
       active: true,
       on_enter: 'log',
@@ -61,7 +61,7 @@ export default function Geofences() {
     {
       id: '3',
       name: 'Restricted Zone',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       polygon: { type: 'polygon', coordinates: [[0, 0]] },
       active: false,
       on_enter: 'alert',
@@ -86,7 +86,7 @@ export default function Geofences() {
     const newGeo: Geofence = {
       id: Date.now().toString(),
       name: newGeofence.name,
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       polygon: { type: 'polygon', coordinates: [[0, 0]] },
       active: true,
       on_enter: newGeofence.on_enter,

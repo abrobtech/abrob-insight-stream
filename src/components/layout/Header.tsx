@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useFirebaseAuth';
 import { 
   Shield, 
   Bell, 
@@ -27,7 +27,7 @@ interface HeaderProps {
 }
 
 export default function Header({ alertsCount = 0, onAlertsClick }: HeaderProps) {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const [notifications] = useState([
     { id: 1, type: 'critical', message: 'Device GT-001 tamper detected', time: '2 min ago' },
     { id: 2, type: 'warning', message: 'Low battery on GT-003 (15%)', time: '5 min ago' },
@@ -35,7 +35,7 @@ export default function Header({ alertsCount = 0, onAlertsClick }: HeaderProps) 
   ]);
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
   };
 
   const getInitials = (email: string) => {
@@ -123,7 +123,7 @@ export default function Header({ alertsCount = 0, onAlertsClick }: HeaderProps) 
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarImage src={user?.photoURL || undefined} />
                   <AvatarFallback className="gradient-primary text-white font-semibold">
                     {user?.email ? getInitials(user.email) : 'U'}
                   </AvatarFallback>
@@ -134,10 +134,10 @@ export default function Header({ alertsCount = 0, onAlertsClick }: HeaderProps) 
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {user?.user_metadata?.first_name || 'User'}
+                    {user?.displayName || 'User'}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {user?.email}
+                    {user?.email || ''}
                   </p>
                 </div>
               </DropdownMenuLabel>

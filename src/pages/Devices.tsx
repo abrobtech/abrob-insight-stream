@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useFirebaseAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -37,7 +36,7 @@ export default function Devices() {
       id: '1',
       imei: 'GT-001-2024',
       name: 'Fleet Vehicle A1',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date().toISOString(),
       battery_percentage: 85,
       tamper_status: false,
@@ -48,7 +47,7 @@ export default function Devices() {
       id: '2',
       imei: 'GT-002-2024', 
       name: 'Personal Vehicle',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date(Date.now() - 300000).toISOString(),
       battery_percentage: 15,
       tamper_status: true,
@@ -59,7 +58,7 @@ export default function Devices() {
       id: '3',
       imei: 'GT-003-2024',
       name: 'Delivery Truck B2',
-      owner_id: user?.id || '',
+      owner_id: user?.uid || '',
       last_seen: new Date(Date.now() - 1800000).toISOString(),
       battery_percentage: 67,
       tamper_status: false,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { database } from '@/config/firebase';
+import { ref, get, update } from 'firebase/database';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -22,7 +23,7 @@ interface Profile {
 }
 
 export default function Profile() {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -45,21 +46,12 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading profile:', error);
-      }
-
-      if (data) {
-        setProfile(data);
+      const snapshot = await get(ref(database, `users/${user.uid}`));
+      if (snapshot.exists()) {
+        setProfile(snapshot.val());
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Error loading profile from Firebase RTDB:', error);
     } finally {
       setLoading(false);
     }
@@ -70,22 +62,17 @@ export default function Profile() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          ...profile,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
+      await update(ref(database, `users/${user.uid}`), {
+        ...profile,
+        updatedAt: new Date().toISOString()
+      });
 
       toast({
         title: "Profile updated",
         description: "Your profile has been saved successfully.",
       });
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error('Error saving profile to Firebase RTDB:', error);
       toast({
         title: "Error",
         description: "Failed to save profile. Please try again.",
@@ -98,7 +85,7 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await logout();
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
