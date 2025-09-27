@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
+import DeviceDetails from '@/components/devices/DeviceDetails';
+import DeviceTracking from '@/components/devices/DeviceTracking';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,69 +13,16 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Battery, Shield, Radio, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface Device {
-  id: string;
-  imei: string;
-  name: string;
-  owner_id: string;
-  last_seen: string;
-  battery_percentage: number;
-  tamper_status: boolean;
-  jamming_status: boolean;
-  status: 'online' | 'offline' | 'maintenance';
-}
-
 export default function Devices() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [devices, setDevices] = useState<Device[]>([]);
+  const { devices, loading } = useGPSData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<any>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Sample data for demo
-  const sampleDevices: Device[] = [
-    {
-      id: '1',
-      imei: 'GT-001-2024',
-      name: 'Fleet Vehicle A1',
-      owner_id: user?.uid || '',
-      last_seen: new Date().toISOString(),
-      battery_percentage: 85,
-      tamper_status: false,
-      jamming_status: false,
-      status: 'online'
-    },
-    {
-      id: '2',
-      imei: 'GT-002-2024', 
-      name: 'Personal Vehicle',
-      owner_id: user?.uid || '',
-      last_seen: new Date(Date.now() - 300000).toISOString(),
-      battery_percentage: 15,
-      tamper_status: true,
-      jamming_status: false,
-      status: 'online'
-    },
-    {
-      id: '3',
-      imei: 'GT-003-2024',
-      name: 'Delivery Truck B2',
-      owner_id: user?.uid || '',
-      last_seen: new Date(Date.now() - 1800000).toISOString(),
-      battery_percentage: 67,
-      tamper_status: false,
-      jamming_status: true,
-      status: 'offline'
-    }
-  ];
-
-  useEffect(() => {
-    setDevices(sampleDevices);
-    setLoading(false);
-  }, [user]);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
 
   const filteredDevices = devices.filter(device =>
     device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,6 +42,16 @@ export default function Devices() {
     if (percentage > 50) return 'text-green-600';
     if (percentage > 20) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const handleViewDetails = (device: any) => {
+    setSelectedDevice(device);
+    setShowDetails(true);
+  };
+
+  const handleTrackLive = (device: any) => {
+    setSelectedDevice(device);
+    setShowTracking(true);
   };
 
   if (loading) {
@@ -135,8 +95,7 @@ export default function Devices() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDevices.map((device) => (
-                <Card key={device.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => setSelectedDevice(device)}>
+                <Card key={device.id} className="p-6 hover:shadow-lg transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="font-semibold text-lg">{device.name}</h3>
@@ -151,8 +110,8 @@ export default function Devices() {
                         <Battery className="w-4 h-4" />
                         <span className="text-sm">Battery</span>
                       </div>
-                      <span className={`font-semibold ${getBatteryColor(device.battery_percentage)}`}>
-                        {device.battery_percentage}%
+                      <span className={`font-semibold ${getBatteryColor(device.batteryPercentage)}`}>
+                        {device.batteryPercentage}%
                       </span>
                     </div>
 
@@ -166,14 +125,24 @@ export default function Devices() {
                       </Badge>
                     </div>
 
-                    {device.tamper_status && (
+                    {device.speed !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="w-4 h-4" />
+                          <span className="text-sm">Speed</span>
+                        </div>
+                        <span className="font-medium">{device.speed} mph</span>
+                      </div>
+                    )}
+
+                    {device.tamperStatus && (
                       <div className="flex items-center space-x-2 text-red-600">
                         <Shield className="w-4 h-4" />
                         <span className="text-sm font-medium">Tamper Alert</span>
                       </div>
                     )}
 
-                    {device.jamming_status && (
+                    {device.jammingStatus && (
                       <div className="flex items-center space-x-2 text-orange-600">
                         <Radio className="w-4 h-4" />
                         <span className="text-sm font-medium">Jamming Detected</span>
@@ -181,15 +150,24 @@ export default function Devices() {
                     )}
 
                     <div className="text-xs text-muted-foreground">
-                      Last seen: {new Date(device.last_seen).toLocaleString()}
+                      Last seen: {new Date(device.lastSeen).toLocaleString()}
                     </div>
                   </div>
 
                   <div className="flex space-x-2 mt-4">
-                    <Button size="sm" variant="outline" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleViewDetails(device)}
+                    >
                       View Details
                     </Button>
-                    <Button size="sm" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleTrackLive(device)}
+                    >
                       Track Live
                     </Button>
                   </div>
@@ -199,6 +177,20 @@ export default function Devices() {
           </div>
         </div>
       </div>
+
+      {/* Device Details Modal */}
+      <DeviceDetails
+        device={selectedDevice}
+        open={showDetails}
+        onClose={() => setShowDetails(false)}
+      />
+
+      {/* Device Tracking Modal */}
+      <DeviceTracking
+        device={selectedDevice}
+        open={showTracking}
+        onClose={() => setShowTracking(false)}
+      />
     </div>
   );
 }
