@@ -5,21 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, Navigation, Layers } from 'lucide-react';
-
-interface Device {
-  id: string;
-  imei: string;
-  name: string;
-  owner_id: string;
-  last_seen: string;
-  battery_percentage: number;
-  tamper_status: boolean;
-  jamming_status: boolean;
-  status: 'online' | 'offline' | 'maintenance';
-  latitude?: number;
-  longitude?: number;
-  speed?: number;
-}
+import { Device } from '@/hooks/useGPSData';
 
 interface MapProps {
   devices: Device[];
@@ -70,10 +56,10 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
         <div style="padding: 10px;">
           <h3 style="margin: 0 0 10px 0;">${device.name}</h3>
           <p><strong>Status:</strong> <span style="color: ${getStatusColor(device)}">${device.status}</span></p>
-          <p><strong>Battery:</strong> ${device.battery_percentage}%</p>
+          <p><strong>Battery:</strong> ${device.batteryPercentage}%</p>
           <p><strong>Speed:</strong> ${device.speed || 0} mph</p>
-          ${device.tamper_status ? '<p style="color: red;"><strong>⚠️ Tamper Alert</strong></p>' : ''}
-          ${device.jamming_status ? '<p style="color: orange;"><strong>📡 Jamming Detected</strong></p>' : ''}
+          ${device.tamperStatus ? '<p style="color: red;"><strong>⚠️ Tamper Alert</strong></p>' : ''}
+          ${device.jammingStatus ? '<p style="color: orange;"><strong>📡 Jamming Detected</strong></p>' : ''}
         </div>
       `,
     });
@@ -87,7 +73,7 @@ export default function Map({ devices, selectedDevice, onDeviceSelect }: MapProp
   };
 
   const getStatusColor = (device: Device) => {
-    if (device.tamper_status || device.jamming_status) return '#ef4444'; // red
+    if (device.tamperStatus || device.jammingStatus) return '#ef4444'; // red
     switch (device.status) {
       case 'online': return '#10b981'; // green
       case 'offline': return '#6b7280'; // gray

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData } from '@/hooks/useGPSData';
+import { useGPSData, Device } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Map from '@/components/dashboard/Map';
@@ -11,140 +11,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Activity, Battery, Shield, MapPin } from 'lucide-react';
 
-interface Device {
-  id: string;
-  imei: string;
-  name: string;
-  owner_id: string;
-  last_seen: string;
-  battery_percentage: number;
-  tamper_status: boolean;
-  jamming_status: boolean;
-  status: 'online' | 'offline' | 'maintenance';
-  latitude?: number;
-  longitude?: number;
-  speed?: number;
-}
-
-interface Location {
-  device_id: string;
-  latitude: number;
-  longitude: number;
-  speed: number;
-  timestamp: string;
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
+  const { devices, gpsData, loading } = useGPSData();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [devicesSidebarCollapsed, setDevicesSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
-  const [loading, setLoading] = useState(true);
-
-  // Sample data for demo purposes
-  const sampleDevices: Device[] = [
-    {
-      id: '1',
-      imei: 'GT-001-2024',
-      name: 'Fleet Vehicle A1',
-      owner_id: user?.uid || '',
-      last_seen: new Date().toISOString(),
-      battery_percentage: 85,
-      tamper_status: false,
-      jamming_status: false,
-      status: 'online',
-      latitude: 40.7128,
-      longitude: -74.0060,
-      speed: 25
-    },
-    {
-      id: '2',
-      imei: 'GT-002-2024',
-      name: 'Personal Vehicle',
-      owner_id: user?.uid || '',
-      last_seen: new Date(Date.now() - 300000).toISOString(),
-      battery_percentage: 15,
-      tamper_status: true,
-      jamming_status: false,
-      status: 'online',
-      latitude: 40.7589,
-      longitude: -73.9851,
-      speed: 0
-    },
-    {
-      id: '3',
-      imei: 'GT-003-2024',
-      name: 'Delivery Truck B2',
-      owner_id: user?.uid || '',
-      last_seen: new Date(Date.now() - 1800000).toISOString(),
-      battery_percentage: 67,
-      tamper_status: false,
-      jamming_status: true,
-      status: 'offline',
-      latitude: 40.6782,
-      longitude: -73.9442,
-      speed: 45
-    },
-    {
-      id: '4',
-      imei: 'GT-004-2024',
-      name: 'Asset Tracker X1',
-      owner_id: user?.uid || '',
-      last_seen: new Date().toISOString(),
-      battery_percentage: 92,
-      tamper_status: false,
-      jamming_status: false,
-      status: 'online',
-      latitude: 40.7505,
-      longitude: -73.9934,
-      speed: 12
-    },
-    {
-      id: '5',
-      imei: 'GT-005-2024',
-      name: 'Equipment Monitor',
-      owner_id: user?.uid || '',
-      last_seen: new Date(Date.now() - 600000).toISOString(),
-      battery_percentage: 38,
-      tamper_status: false,
-      jamming_status: false,
-      status: 'maintenance',
-      latitude: 40.7282,
-      longitude: -73.7949,
-      speed: 0
-    }
-  ];
-
-  const { gpsData } = useGPSData();
 
   useEffect(() => {
-    // Load devices (using sample data for now)
-    setDevices(sampleDevices);
-    setSelectedDevice(sampleDevices[0]);
-    setLoading(false);
-
-    // Firebase realtime listeners will be handled by useGPSData hook
-  }, [user]);
-
-  const handleLocationUpdate = (location: Location) => {
-    setDevices(prevDevices =>
-      prevDevices.map(device =>
-        device.id === location.device_id
-          ? {
-              ...device,
-              latitude: location.latitude,
-              longitude: location.longitude,
-              speed: location.speed,
-              last_seen: location.timestamp
-            }
-          : device
-      )
-    );
-  };
+    if (devices.length > 0 && !selectedDevice) {
+      setSelectedDevice(devices[0]);
+    }
+  }, [devices, selectedDevice]);
 
   const handleDeviceSelect = (device: Device) => {
     setSelectedDevice(device);
@@ -152,9 +33,9 @@ export default function Dashboard() {
 
   const getAlertsCount = () => {
     return devices.filter(device => 
-      device.tamper_status || 
-      device.jamming_status || 
-      device.battery_percentage < 20
+      device.tamperStatus || 
+      device.jammingStatus || 
+      device.batteryPercentage < 20
     ).length;
   };
 
@@ -245,7 +126,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-warning">
-                      {devices.filter(d => d.battery_percentage < 20).length}
+                      {devices.filter(d => d.batteryPercentage < 20).length}
                     </div>
                     <p className="text-xs text-muted-foreground">Below 20%</p>
                   </CardContent>
@@ -274,7 +155,7 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {devices
-                      .filter(device => device.tamper_status || device.jamming_status || device.battery_percentage < 20)
+                      .filter(device => device.tamperStatus || device.jammingStatus || device.batteryPercentage < 20)
                       .slice(0, 3)
                       .map(device => (
                         <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -283,16 +164,16 @@ export default function Dashboard() {
                             <div>
                               <p className="font-medium">{device.name}</p>
                               <p className="text-sm text-muted-foreground">
-                                {device.tamper_status && "Tamper detected"}
-                                {device.jamming_status && "Signal jamming"}
-                                {device.battery_percentage < 20 && `Low battery: ${device.battery_percentage}%`}
+                                {device.tamperStatus && "Tamper detected"}
+                                {device.jammingStatus && "Signal jamming"}
+                                {device.batteryPercentage < 20 && `Low battery: ${device.batteryPercentage}%`}
                               </p>
                             </div>
                           </div>
                           <Badge variant="destructive">Alert</Badge>
                         </div>
                       ))}
-                    {devices.filter(device => device.tamper_status || device.jamming_status || device.battery_percentage < 20).length === 0 && (
+                    {devices.filter(device => device.tamperStatus || device.jammingStatus || device.batteryPercentage < 20).length === 0 && (
                       <div className="text-center py-6 text-muted-foreground">
                         <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No active alerts</p>

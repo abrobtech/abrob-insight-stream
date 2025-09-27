@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Device } from '@/hooks/useGPSData';
 import { 
   Battery, 
   MapPin, 
@@ -17,21 +18,6 @@ import {
   Lock,
   Share2
 } from 'lucide-react';
-
-interface Device {
-  id: string;
-  imei: string;
-  name: string;
-  owner_id: string;
-  last_seen: string;
-  battery_percentage: number;
-  tamper_status: boolean;
-  jamming_status: boolean;
-  status: 'online' | 'offline' | 'maintenance';
-  latitude?: number;
-  longitude?: number;
-  speed?: number;
-}
 
 interface DevicesSidebarProps {
   devices: Device[];
@@ -56,7 +42,7 @@ export default function DevicesSidebar({
   );
 
   const getStatusColor = (device: Device) => {
-    if (device.tamper_status || device.jamming_status) return 'destructive';
+    if (device.tamperStatus || device.jammingStatus) return 'destructive';
     switch (device.status) {
       case 'online': return 'default';
       case 'offline': return 'secondary';
@@ -66,8 +52,8 @@ export default function DevicesSidebar({
   };
 
   const getStatusIcon = (device: Device) => {
-    if (device.tamper_status) return <AlertTriangle className="w-4 h-4 text-destructive" />;
-    if (device.jamming_status) return <Radio className="w-4 h-4 text-warning" />;
+    if (device.tamperStatus) return <AlertTriangle className="w-4 h-4 text-destructive" />;
+    if (device.jammingStatus) return <Radio className="w-4 h-4 text-warning" />;
     return <MapPin className="w-4 h-4 text-primary" />;
   };
 
@@ -97,7 +83,7 @@ export default function DevicesSidebar({
             className="w-10 h-10 p-0 relative"
           >
             {getStatusIcon(device)}
-            {(device.tamper_status || device.jamming_status) && (
+            {(device.tamperStatus || device.jammingStatus) && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full animate-pulse" />
             )}
           </Button>
@@ -163,9 +149,9 @@ export default function DevicesSidebar({
                     {/* Status indicators */}
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center space-x-1">
-                        <Battery className={`w-4 h-4 ${getBatteryColor(device.battery_percentage)}`} />
-                        <span className={getBatteryColor(device.battery_percentage)}>
-                          {device.battery_percentage}%
+                        <Battery className={`w-4 h-4 ${getBatteryColor(device.batteryPercentage)}`} />
+                        <span className={getBatteryColor(device.batteryPercentage)}>
+                          {device.batteryPercentage}%
                         </span>
                       </div>
                       {device.speed !== undefined && (
@@ -177,15 +163,15 @@ export default function DevicesSidebar({
                     </div>
 
                     {/* Alerts */}
-                    {(device.tamper_status || device.jamming_status) && (
+                    {(device.tamperStatus || device.jammingStatus) && (
                       <div className="space-y-1">
-                        {device.tamper_status && (
+                        {device.tamperStatus && (
                           <div className="flex items-center space-x-2 text-destructive text-xs">
                             <AlertTriangle className="w-3 h-3" />
                             <span>Tamper detected</span>
                           </div>
                         )}
-                        {device.jamming_status && (
+                        {device.jammingStatus && (
                           <div className="flex items-center space-x-2 text-warning text-xs">
                             <Radio className="w-3 h-3" />
                             <span>Signal jamming</span>
@@ -196,7 +182,7 @@ export default function DevicesSidebar({
 
                     {/* Last seen */}
                     <div className="text-xs text-muted-foreground">
-                      Last seen: {new Date(device.last_seen).toLocaleString()}
+                      Last seen: {new Date(device.lastSeen).toLocaleString()}
                     </div>
                   </div>
                 </CardContent>

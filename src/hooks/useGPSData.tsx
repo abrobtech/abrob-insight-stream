@@ -38,38 +38,56 @@ export function useGPSData() {
   useEffect(() => {
     if (!user) return;
 
-    const devicesRef = ref(database, `users/${user.uid}/devices`);
-    const gpsRef = ref(database, `users/${user.uid}/gpsData`);
-
-    const unsubscribeDevices = onValue(devicesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const devicesList = Object.entries(data).map(([id, device]: [string, any]) => ({
-          id,
-          ...device,
-        }));
-        setDevices(devicesList);
-      } else {
-        setDevices([]);
-      }
-      setLoading(false);
-    });
+    const gpsRef = ref(database, 'gpsData');
 
     const unsubscribeGPS = onValue(gpsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const gpsList = Object.entries(data).map(([id, gps]: [string, any]) => ({
-          id,
-          ...gps,
-        }));
+        const devicesList: Device[] = [];
+        const gpsList: GPSData[] = [];
+
+        // Process each device in gpsData
+        Object.entries(data).forEach(([deviceId, deviceData]: [string, any]) => {
+          const device: Device = {
+            id: deviceId,
+            name: `Device ${deviceId.replace('_', ' ').toUpperCase()}`,
+            imei: deviceId,
+            owner: user.uid,
+            lastSeen: new Date().toISOString(),
+            batteryPercentage: deviceData.batteryLevel || 0,
+            tamperStatus: false,
+            jammingStatus: false,
+            status: 'online' as const,
+            latitude: deviceData.latitude,
+            longitude: deviceData.longitude,
+            speed: 0, // Add speed if available in your data
+          };
+
+          const gpsEntry: GPSData = {
+            id: `${deviceId}_${Date.now()}`,
+            deviceId: deviceId,
+            latitude: deviceData.latitude,
+            longitude: deviceData.longitude,
+            speed: 0,
+            batteryPercentage: deviceData.batteryLevel || 0,
+            timestamp: new Date().toISOString(),
+            status: 'online' as const,
+          };
+
+          devicesList.push(device);
+          gpsList.push(gpsEntry);
+        });
+
+        setDevices(devicesList);
         setGpsData(gpsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
       } else {
+        setDevices([]);
         setGpsData([]);
       }
+      setLoading(false);
     });
 
     return () => {
-      unsubscribeDevices();
       unsubscribeGPS();
     };
   }, [user]);
