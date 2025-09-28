@@ -3,10 +3,7 @@ import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { Device } from '@/hooks/useGPSData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { 
   MapPin, 
@@ -29,15 +26,15 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maptilersdk.Map | null>(null);
   const marker = useRef<maptilersdk.Marker | null>(null);
-  const [mapTilerKey, setMapTilerKey] = useState<string>('');
-  const [showTokenInput, setShowTokenInput] = useState(true);
+  // Replace 'YOUR_MAPTILER_API_KEY_HERE' with your actual MapTiler API key
+  const MAPTILER_API_KEY = 'YOUR_MAPTILER_API_KEY_HERE';
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const initializeMap = async () => {
-    if (!mapContainer.current || !mapTilerKey || !device) {
+    if (!mapContainer.current || !MAPTILER_API_KEY || !device) {
       console.error('Missing required data:', { 
         mapContainer: !!mapContainer.current, 
-        mapTilerKey: !!mapTilerKey, 
+        MAPTILER_API_KEY: !!MAPTILER_API_KEY, 
         device: !!device 
       });
       return;
@@ -45,7 +42,7 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
 
     try {
       console.log('Initializing MapTiler with device:', device);
-      maptilersdk.config.apiKey = mapTilerKey;
+      maptilersdk.config.apiKey = MAPTILER_API_KEY;
 
       // Use device location data
       const lat = device.latitude;
@@ -70,7 +67,6 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
         if (lat && lng) {
           createDeviceMarker();
         }
-        setShowTokenInput(false);
       });
 
     } catch (error) {
@@ -160,63 +156,15 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
     }
   }, [device]);
 
-  // Initialize map after switching from token input to map view
+  // Initialize map when dialog opens
   useEffect(() => {
-    if (!showTokenInput) {
-      initializeMap();
+    if (open && device) {
+      const timer = setTimeout(() => initializeMap(), 100);
+      return () => clearTimeout(timer);
     }
-  }, [showTokenInput]);
+  }, [open, device]);
 
   if (!device) return null;
-
-  if (showTokenInput) {
-    return (
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className={isFullscreen ? "sm:max-w-[95vw] sm:max-h-[95vh]" : "sm:max-w-4xl"}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Navigation className="w-5 h-5" />
-                <span>Track Live - {device.name}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-
-          <Card className="p-6 h-96 flex items-center justify-center">
-            <div className="max-w-md w-full space-y-4">
-              <div className="text-center space-y-2">
-                <MapPin className="w-12 h-12 text-primary mx-auto" />
-                <h3 className="text-lg font-semibold">Setup MapTiler</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enter your MapTiler API key to enable real-time tracking
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maptiler-key">MapTiler API Key</Label>
-                <Input
-                  id="maptiler-key"
-                  type="password"
-                  placeholder="Enter your MapTiler API key..."
-                  value={mapTilerKey}
-                  onChange={(e) => setMapTilerKey(e.target.value)}
-                />
-              </div>
-              <Button onClick={() => setShowTokenInput(false)} disabled={!mapTilerKey} className="w-full">
-                Initialize Live Tracking
-              </Button>
-            </div>
-          </Card>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
