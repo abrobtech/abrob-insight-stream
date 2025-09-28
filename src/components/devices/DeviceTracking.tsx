@@ -34,14 +34,28 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const initializeMap = async () => {
-    if (!mapContainer.current || !mapTilerKey || !device) return;
+    if (!mapContainer.current || !mapTilerKey || !device) {
+      console.error('Missing required data:', { 
+        mapContainer: !!mapContainer.current, 
+        mapTilerKey: !!mapTilerKey, 
+        device: !!device 
+      });
+      return;
+    }
 
     try {
+      console.log('Initializing MapTiler with device:', device);
       maptilersdk.config.apiKey = mapTilerKey;
 
-      const center: [number, number] = device.latitude && device.longitude 
-        ? [device.longitude, device.latitude]
+      // Use device location data
+      const lat = device.latitude;
+      const lng = device.longitude;
+      
+      const center: [number, number] = lat && lng 
+        ? [lng, lat]
         : [-74.0060, 40.7128];
+
+      console.log('Map center:', center);
 
       map.current = new maptilersdk.Map({
         container: mapContainer.current,
@@ -50,13 +64,19 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
         zoom: 15,
       });
 
-      if (device.latitude && device.longitude) {
-        createDeviceMarker();
-      }
+      // Wait for map to load before creating marker
+      map.current.on('load', () => {
+        console.log('Map loaded successfully');
+        if (lat && lng) {
+          createDeviceMarker();
+        }
+        setShowTokenInput(false);
+      });
 
-      setShowTokenInput(false);
     } catch (error) {
       console.error('Error loading MapTiler:', error);
+      // Show user-friendly error message
+      alert('Failed to initialize map. Please check your MapTiler API key and try again.');
     }
   };
 
