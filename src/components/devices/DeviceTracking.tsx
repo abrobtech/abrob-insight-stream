@@ -160,6 +160,13 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
     }
   }, [device]);
 
+  // Initialize map after switching from token input to map view
+  useEffect(() => {
+    if (!showTokenInput) {
+      initializeMap();
+    }
+  }, [showTokenInput]);
+
   if (!device) return null;
 
   if (showTokenInput) {
@@ -201,7 +208,7 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
                   onChange={(e) => setMapTilerKey(e.target.value)}
                 />
               </div>
-              <Button onClick={initializeMap} disabled={!mapTilerKey} className="w-full">
+              <Button onClick={() => setShowTokenInput(false)} disabled={!mapTilerKey} className="w-full">
                 Initialize Live Tracking
               </Button>
             </div>
