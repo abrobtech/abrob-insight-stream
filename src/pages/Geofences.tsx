@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -26,6 +27,7 @@ interface Geofence {
 export default function Geofences() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { devices, loading: gpsLoading } = useGPSData();
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -36,47 +38,57 @@ export default function Geofences() {
     on_exit: 'alert'
   });
 
-  // Sample geofences data
-  const sampleGeofences: Geofence[] = [
-    {
-      id: '1',
-      name: 'Home Zone',
-      owner_id: user?.uid || '',
-      polygon: { type: 'polygon', coordinates: [[0, 0]] },
-      active: true,
-      on_enter: 'notify',
-      on_exit: 'alert',
-      created_at: new Date().toISOString(),
-      device_count: 2
-    },
-    {
-      id: '2',
-      name: 'Office Area',
-      owner_id: user?.uid || '',
-      polygon: { type: 'polygon', coordinates: [[0, 0]] },
-      active: true,
-      on_enter: 'log',
-      on_exit: 'notify',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      device_count: 3
-    },
-    {
-      id: '3',
-      name: 'Restricted Zone',
-      owner_id: user?.uid || '',
-      polygon: { type: 'polygon', coordinates: [[0, 0]] },
-      active: false,
-      on_enter: 'alert',
-      on_exit: 'log',
-      created_at: new Date(Date.now() - 172800000).toISOString(),
-      device_count: 1
-    }
-  ];
-
+  // Generate sample geofences based on device locations
   useEffect(() => {
-    setGeofences(sampleGeofences);
-    setLoading(false);
-  }, [user]);
+    if (!gpsLoading && user) {
+      const generatedGeofences: Geofence[] = [
+        {
+          id: '1',
+          name: 'Home Zone',
+          owner_id: user.uid,
+          polygon: { type: 'polygon', coordinates: [[0, 0]] },
+          active: true,
+          on_enter: 'notify',
+          on_exit: 'alert',
+          created_at: new Date().toISOString(),
+          device_count: devices.filter(d => d.status === 'online').length
+        },
+        {
+          id: '2',
+          name: 'Office Area',
+          owner_id: user.uid,
+          polygon: { type: 'polygon', coordinates: [[0, 0]] },
+          active: true,
+          on_enter: 'log',
+          on_exit: 'notify',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          device_count: Math.floor(devices.length / 2)
+        }
+      ];
+
+      // Add device-specific geofences if devices exist
+      if (devices.length > 0) {
+        devices.forEach((device, index) => {
+          if (index < 2) { // Only add geofences for first 2 devices
+            generatedGeofences.push({
+              id: `device_zone_${device.id}`,
+              name: `${device.name} Safe Zone`,
+              owner_id: user.uid,
+              polygon: { type: 'polygon', coordinates: [[device.latitude || 0, device.longitude || 0]] },
+              active: device.status === 'online',
+              on_enter: 'log',
+              on_exit: 'alert',
+              created_at: new Date(Date.now() - (index * 172800000)).toISOString(),
+              device_count: 1
+            });
+          }
+        });
+      }
+
+      setGeofences(generatedGeofences);
+      setLoading(false);
+    }
+  }, [devices, gpsLoading, user]);
 
   const handleToggleActive = (geofenceId: string) => {
     setGeofences(prev => prev.map(geo => 

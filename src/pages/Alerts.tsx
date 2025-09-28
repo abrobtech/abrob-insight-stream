@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -28,84 +29,102 @@ interface Alert {
 export default function Alerts() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { devices, loading: gpsLoading } = useGPSData();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
 
-  // Sample alerts data
-  const sampleAlerts: Alert[] = [
-    {
-      id: '1',
-      device_id: '2',
-      device_name: 'Personal Vehicle',
-      type: 'tamper',
-      severity: 'critical',
-      message: 'Tamper detection triggered - device casing opened',
-      acknowledged: false,
-      resolved: false,
-      created_at: new Date(Date.now() - 300000).toISOString()
-    },
-    {
-      id: '2',
-      device_id: '3',
-      device_name: 'Delivery Truck B2',
-      type: 'jamming',
-      severity: 'high',
-      message: 'GPS jamming detected - signal interference active',
-      acknowledged: true,
-      acknowledged_by: 'John Doe',
-      acknowledged_at: new Date(Date.now() - 600000).toISOString(),
-      resolved: false,
-      created_at: new Date(Date.now() - 1800000).toISOString()
-    },
-    {
-      id: '3',
-      device_id: '2',
-      device_name: 'Personal Vehicle',
-      type: 'battery',
-      severity: 'medium',
-      message: 'Low battery warning - 15% remaining',
-      acknowledged: true,
-      acknowledged_by: 'Jane Smith',
-      acknowledged_at: new Date(Date.now() - 1200000).toISOString(),
-      resolved: true,
-      resolved_by: 'Jane Smith',
-      resolved_at: new Date(Date.now() - 900000).toISOString(),
-      created_at: new Date(Date.now() - 1800000).toISOString()
-    },
-    {
-      id: '4',
-      device_id: '1',
-      device_name: 'Fleet Vehicle A1',
-      type: 'geofence',
-      severity: 'low',
-      message: 'Vehicle exited authorized zone - Downtown Area',
-      acknowledged: true,
-      acknowledged_by: 'Admin',
-      acknowledged_at: new Date(Date.now() - 3600000).toISOString(),
-      resolved: true,
-      resolved_by: 'Admin',
-      resolved_at: new Date(Date.now() - 3000000).toISOString(),
-      created_at: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-      id: '5',
-      device_id: '1',
-      device_name: 'Fleet Vehicle A1',
-      type: 'anomaly',
-      severity: 'medium',
-      message: 'Unusual route deviation detected - 78% anomaly score',
-      acknowledged: false,
-      resolved: false,
-      created_at: new Date(Date.now() - 900000).toISOString()
-    }
-  ];
-
+  // Generate alerts from real device data
   useEffect(() => {
-    setAlerts(sampleAlerts);
-    setLoading(false);
-  }, [user]);
+    if (!gpsLoading && devices.length > 0) {
+      const generatedAlerts: Alert[] = [];
+
+      devices.forEach((device) => {
+        // Check for battery alerts
+        if (device.batteryPercentage < 20) {
+          generatedAlerts.push({
+            id: `battery_${device.id}`,
+            device_id: device.id,
+            device_name: device.name,
+            type: 'battery',
+            severity: device.batteryPercentage < 10 ? 'critical' : 'medium',
+            message: `Low battery warning - ${device.batteryPercentage}% remaining`,
+            acknowledged: false,
+            resolved: false,
+            created_at: new Date(Date.now() - Math.random() * 3600000).toISOString()
+          });
+        }
+
+        // Check for tamper alerts
+        if (device.tamperStatus) {
+          generatedAlerts.push({
+            id: `tamper_${device.id}`,
+            device_id: device.id,
+            device_name: device.name,
+            type: 'tamper',
+            severity: 'critical',
+            message: 'Tamper detection triggered - device casing opened',
+            acknowledged: false,
+            resolved: false,
+            created_at: new Date(Date.now() - Math.random() * 1800000).toISOString()
+          });
+        }
+
+        // Check for jamming alerts
+        if (device.jammingStatus) {
+          generatedAlerts.push({
+            id: `jamming_${device.id}`,
+            device_id: device.id,
+            device_name: device.name,
+            type: 'jamming',
+            severity: 'high',
+            message: 'GPS jamming detected - signal interference active',
+            acknowledged: false,
+            resolved: false,
+            created_at: new Date(Date.now() - Math.random() * 2400000).toISOString()
+          });
+        }
+
+        // Check for offline devices
+        if (device.status === 'offline') {
+          generatedAlerts.push({
+            id: `offline_${device.id}`,
+            device_id: device.id,
+            device_name: device.name,
+            type: 'anomaly',
+            severity: 'medium',
+            message: 'Device is offline - no recent GPS data received',
+            acknowledged: false,
+            resolved: false,
+            created_at: new Date(Date.now() - Math.random() * 1200000).toISOString()
+          });
+        }
+      });
+
+      // Add some resolved sample alerts for demonstration
+      if (generatedAlerts.length < 2) {
+        generatedAlerts.push({
+          id: 'resolved_sample',
+          device_id: devices[0]?.id || '1',
+          device_name: devices[0]?.name || 'Sample Device',
+          type: 'geofence',
+          severity: 'low',
+          message: 'Vehicle exited authorized zone - Downtown Area',
+          acknowledged: true,
+          acknowledged_by: 'Admin',
+          acknowledged_at: new Date(Date.now() - 3600000).toISOString(),
+          resolved: true,
+          resolved_by: 'Admin',
+          resolved_at: new Date(Date.now() - 3000000).toISOString(),
+          created_at: new Date(Date.now() - 7200000).toISOString()
+        });
+      }
+
+      setAlerts(generatedAlerts);
+      setLoading(false);
+    }
+  }, [devices, gpsLoading]);
 
   const getAlertIcon = (type: string) => {
     switch (type) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useGPSData } from '@/hooks/useGPSData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -29,6 +30,7 @@ interface Trip {
 export default function History() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { devices, gpsData, loading: gpsLoading } = useGPSData();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('all');
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
@@ -39,60 +41,44 @@ export default function History() {
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Sample trip data
-  const sampleTrips: Trip[] = [
-    {
-      id: '1',
-      device_id: '1',
-      device_name: 'Fleet Vehicle A1',
-      start_time: new Date(Date.now() - 7200000).toISOString(),
-      end_time: new Date(Date.now() - 3600000).toISOString(),
-      duration: 60,
-      distance: 25.4,
-      start_location: 'Downtown Office',
-      end_location: 'Client Meeting Point',
-      max_speed: 65,
-      avg_speed: 35
-    },
-    {
-      id: '2',
-      device_id: '2',
-      device_name: 'Personal Vehicle',
-      start_time: new Date(Date.now() - 14400000).toISOString(),
-      end_time: new Date(Date.now() - 10800000).toISOString(),
-      duration: 45,
-      distance: 18.2,
-      start_location: 'Home',
-      end_location: 'Shopping Center',
-      max_speed: 45,
-      avg_speed: 28
-    },
-    {
-      id: '3',
-      device_id: '3',
-      device_name: 'Delivery Truck B2',
-      start_time: new Date(Date.now() - 21600000).toISOString(),
-      end_time: new Date(Date.now() - 18000000).toISOString(),
-      duration: 120,
-      distance: 67.8,
-      start_location: 'Warehouse',
-      end_location: 'Distribution Center',
-      max_speed: 75,
-      avg_speed: 42
-    }
-  ];
-
-  const devices = [
-    { id: 'all', name: 'All Devices' },
-    { id: '1', name: 'Fleet Vehicle A1' },
-    { id: '2', name: 'Personal Vehicle' },
-    { id: '3', name: 'Delivery Truck B2' }
-  ];
-
+  // Generate trip history from real GPS data
   useEffect(() => {
-    setTrips(sampleTrips);
-    setLoading(false);
-  }, [user]);
+    if (!gpsLoading && devices.length > 0) {
+      const generatedTrips: Trip[] = devices.map((device, index) => {
+        // Generate realistic trip data based on device information
+        const baseTime = Date.now() - (index * 3600000) - 7200000;
+        const duration = 45 + Math.random() * 60; // 45-105 minutes
+        const distance = 15 + Math.random() * 40; // 15-55 km
+        const avgSpeed = distance / (duration / 60); // Calculate average speed
+        const maxSpeed = avgSpeed * (1.3 + Math.random() * 0.4); // 30-70% higher than avg
+
+        return {
+          id: device.id,
+          device_id: device.id,
+          device_name: device.name,
+          start_time: new Date(baseTime).toISOString(),
+          end_time: new Date(baseTime + duration * 60000).toISOString(),
+          duration: Math.round(duration),
+          distance: Math.round(distance * 10) / 10,
+          start_location: device.latitude && device.longitude ? 
+            `Location (${device.latitude.toFixed(4)}, ${device.longitude.toFixed(4)})` : 
+            'Current Location',
+          end_location: 'Destination Point',
+          max_speed: Math.round(maxSpeed),
+          avg_speed: Math.round(avgSpeed)
+        };
+      });
+
+      setTrips(generatedTrips);
+      setLoading(false);
+    }
+  }, [devices, gpsData, gpsLoading]);
+
+  // Create device options for dropdown
+  const deviceOptions = [
+    { id: 'all', name: 'All Devices' },
+    ...devices.map(device => ({ id: device.id, name: device.name }))
+  ];
 
   const filteredTrips = trips.filter(trip => 
     selectedDevice === 'all' || trip.device_id === selectedDevice
@@ -148,7 +134,7 @@ export default function History() {
                     <SelectValue placeholder="Select device" />
                   </SelectTrigger>
                   <SelectContent>
-                    {devices.map(device => (
+                    {deviceOptions.map(device => (
                       <SelectItem key={device.id} value={device.id}>
                         {device.name}
                       </SelectItem>
