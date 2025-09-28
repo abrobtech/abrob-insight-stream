@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import * as maptilersdk from '@maptiler/sdk';
+import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { Device } from '@/hooks/useGPSData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
@@ -26,31 +27,27 @@ interface DeviceTrackingProps {
 
 export default function DeviceTracking({ device, open, onClose }: DeviceTrackingProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-  const marker = useRef<google.maps.Marker | null>(null);
-  const [googleMapsKey, setGoogleMapsKey] = useState<string>('');
+  const map = useRef<maptilersdk.Map | null>(null);
+  const marker = useRef<maptilersdk.Marker | null>(null);
+  const [mapTilerKey, setMapTilerKey] = useState<string>('');
   const [showTokenInput, setShowTokenInput] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const initializeMap = async () => {
-    if (!mapContainer.current || !googleMapsKey || !device) return;
+    if (!mapContainer.current || !mapTilerKey || !device) return;
 
     try {
-      const loader = new Loader({
-        apiKey: googleMapsKey,
-        version: 'weekly',
-      });
+      maptilersdk.config.apiKey = mapTilerKey;
 
-      await loader.load();
+      const center: [number, number] = device.latitude && device.longitude 
+        ? [device.longitude, device.latitude]
+        : [-74.0060, 40.7128];
 
-      const center = device.latitude && device.longitude 
-        ? { lat: device.latitude, lng: device.longitude }
-        : { lat: 40.7128, lng: -74.0060 };
-
-      map.current = new google.maps.Map(mapContainer.current, {
-        center,
+      map.current = new maptilersdk.Map({
+        container: mapContainer.current,
+        style: maptilersdk.MapStyle.STREETS,
+        center: center,
         zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
       });
 
       if (device.latitude && device.longitude) {
@@ -59,7 +56,7 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
 
       setShowTokenInput(false);
     } catch (error) {
-      console.error('Error loading Google Maps:', error);
+      console.error('Error loading MapTiler:', error);
     }
   };
 
@@ -68,43 +65,43 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
 
     // Remove existing marker
     if (marker.current) {
-      marker.current.setMap(null);
+      marker.current.remove();
     }
 
-    marker.current = new google.maps.Marker({
-      position: { lat: device.latitude, lng: device.longitude },
-      map: map.current,
-      title: device.name,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: getMarkerColor(),
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 2,
-      }
-    });
+    // Create custom marker element
+    const el = document.createElement('div');
+    el.className = 'marker';
+    el.style.backgroundColor = getMarkerColor();
+    el.style.width = '16px';
+    el.style.height = '16px';
+    el.style.borderRadius = '50%';
+    el.style.border = '2px solid #ffffff';
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
 
-    const infoWindow = new google.maps.InfoWindow({
-      content: `
-        <div style="padding: 10px; min-width: 200px;">
-          <h3 style="margin: 0 0 10px 0; font-weight: bold;">${device.name}</h3>
-          <p><strong>Status:</strong> <span style="color: ${getStatusColor()}">${device.status}</span></p>
-          <p><strong>Battery:</strong> ${device.batteryPercentage}%</p>
-          <p><strong>Speed:</strong> ${device.speed || 0} mph</p>
-          <p><strong>Last Update:</strong> ${new Date(device.lastSeen).toLocaleString()}</p>
-          ${device.tamperStatus ? '<p style="color: red;"><strong>⚠️ Tamper Alert</strong></p>' : ''}
-          ${device.jammingStatus ? '<p style="color: orange;"><strong>📡 Signal Jamming</strong></p>' : ''}
-        </div>
-      `,
-    });
+    marker.current = new maptilersdk.Marker({ element: el })
+      .setLngLat([device.longitude, device.latitude] as [number, number])
+      .addTo(map.current);
 
-    marker.current.addListener('click', () => {
-      infoWindow.open(map.current, marker.current);
-    });
+    // Create popup content
+    const popupContent = `
+      <div style="padding: 10px; min-width: 200px;">
+        <h3 style="margin: 0 0 10px 0; font-weight: bold;">${device.name}</h3>
+        <p><strong>Status:</strong> <span style="color: ${getStatusColor()}">${device.status}</span></p>
+        <p><strong>Battery:</strong> ${device.batteryPercentage}%</p>
+        <p><strong>Speed:</strong> ${device.speed || 0} mph</p>
+        <p><strong>Last Update:</strong> ${new Date(device.lastSeen).toLocaleString()}</p>
+        ${device.tamperStatus ? '<p style="color: red;"><strong>⚠️ Tamper Alert</strong></p>' : ''}
+        ${device.jammingStatus ? '<p style="color: orange;"><strong>📡 Signal Jamming</strong></p>' : ''}
+      </div>
+    `;
 
-    // Auto-open info window for real-time tracking
-    infoWindow.open(map.current, marker.current);
+    const popup = new maptilersdk.Popup({ offset: 25 })
+      .setHTML(popupContent);
+
+    marker.current.setPopup(popup);
+    
+    // Auto-open popup for real-time tracking
+    popup.addTo(map.current);
   };
 
   const getMarkerColor = () => {
@@ -139,7 +136,7 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
   useEffect(() => {
     if (map.current && device && device.latitude && device.longitude) {
       createDeviceMarker();
-      map.current.setCenter({ lat: device.latitude, lng: device.longitude });
+      map.current.setCenter([device.longitude, device.latitude] as [number, number]);
     }
   }, [device]);
 
@@ -169,22 +166,22 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
             <div className="max-w-md w-full space-y-4">
               <div className="text-center space-y-2">
                 <MapPin className="w-12 h-12 text-primary mx-auto" />
-                <h3 className="text-lg font-semibold">Setup Google Maps</h3>
+                <h3 className="text-lg font-semibold">Setup MapTiler</h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter your Google Maps API key to enable real-time tracking
+                  Enter your MapTiler API key to enable real-time tracking
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="google-maps-key">Google Maps API Key</Label>
+                <Label htmlFor="maptiler-key">MapTiler API Key</Label>
                 <Input
-                  id="google-maps-key"
+                  id="maptiler-key"
                   type="password"
-                  placeholder="AIza..."
-                  value={googleMapsKey}
-                  onChange={(e) => setGoogleMapsKey(e.target.value)}
+                  placeholder="Enter your MapTiler API key..."
+                  value={mapTilerKey}
+                  onChange={(e) => setMapTilerKey(e.target.value)}
                 />
               </div>
-              <Button onClick={initializeMap} disabled={!googleMapsKey} className="w-full">
+              <Button onClick={initializeMap} disabled={!mapTilerKey} className="w-full">
                 Initialize Live Tracking
               </Button>
             </div>
