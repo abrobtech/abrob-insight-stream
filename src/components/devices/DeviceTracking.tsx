@@ -27,7 +27,7 @@ export default function DeviceTracking({ device, open, onClose }: DeviceTracking
   const map = useRef<maptilersdk.Map | null>(null);
   const marker = useRef<maptilersdk.Marker | null>(null);
   // Replace 'YOUR_MAPTILER_API_KEY_HERE' with your actual MapTiler API key
-  const MAPTILER_API_KEY = 'YOUR_MAPTILER_API_KEY_HERE';
+  const MAPTILER_API_KEY = 'tBvtabTNxhFc7RfCBn1T';
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const initializeMap = async () => {
