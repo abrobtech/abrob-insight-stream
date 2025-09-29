@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import DeviceDetails from '@/components/devices/DeviceDetails';
 import DeviceTracking from '@/components/devices/DeviceTracking';
+import DeviceProvisionModal from '@/components/devices/DeviceProvisionModal';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ export default function Devices() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
+  const [showProvisionModal, setShowProvisionModal] = useState(false);
 
   const filteredDevices = devices.filter(device =>
     device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,6 +56,14 @@ export default function Devices() {
     setShowTracking(true);
   };
 
+  const handleCreated = (device: any) => {
+    // Called after successful creation in modal.
+    // Optionally: refresh device list, navigate, or show toast.
+    // If your useGPSData hook supports refresh, call it here.
+    toast({ title: "Device created", description: "Device was provisioned successfully." });
+    // Example: navigate('/devices') or refresh data depending on your data flow.
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -78,12 +88,12 @@ export default function Devices() {
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold text-foreground">Devices</h1>
-              <Button>Add Device</Button>
+              <Button onClick={() => setShowProvisionModal(true)}>Add Device</Button>
             </div>
 
             <div className="flex items-center space-x-4">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search devices..."
                   value={searchTerm}
@@ -178,18 +188,22 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* Device Details Modal */}
       <DeviceDetails
         device={selectedDevice}
         open={showDetails}
         onClose={() => setShowDetails(false)}
       />
 
-      {/* Device Tracking Modal */}
       <DeviceTracking
         device={selectedDevice}
         open={showTracking}
         onClose={() => setShowTracking(false)}
+      />
+
+      <DeviceProvisionModal
+        open={showProvisionModal}
+        onClose={() => setShowProvisionModal(false)}
+        onCreated={handleCreated}
       />
     </div>
   );
