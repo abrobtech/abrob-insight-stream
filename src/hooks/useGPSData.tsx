@@ -1,129 +1,125 @@
-import { useState, useEffect } from 'react';
-import { ref, onValue, push, set } from 'firebase/database';
-import { database } from '@/config/firebase';
-import { useAuth } from './useFirebaseAuth';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+// If you already have a Supabase client exported, import it here.
+// Adjust the import path if your client is at a different path.
+import { createClient } from '@supabase/supabase-js';
+// If you have a generated client you prefer, replace the lines below with:
+// import { supabase } from '@/integrations/supabase/client';
 
-export interface GPSData {
-  id: string;
-  deviceId: string;
-  latitude: number;
-  longitude: number;
-  speed: number;
-  batteryPercentage: number;
-  timestamp: string;
-  status: 'online' | 'offline';
-}
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 
-export interface Device {
+// NOTE: For production writes you must use a secure server-side key. This client is for read-only queries in the browser.
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+export type Device = {
   id: string;
   name: string;
   imei: string;
-  owner: string;
-  lastSeen: string;
-  batteryPercentage: number;
-  tamperStatus: boolean;
-  jammingStatus: boolean;
-  status: 'online' | 'offline' | 'maintenance';
-  latitude?: number;
-  longitude?: number;
+  owner_id?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  batteryPercentage?: number;
   speed?: number;
-}
+  status?: string;
+  tamperStatus?: boolean;
+  jammingStatus?: boolean;
+  lastSeen?: string;
+  // ... any other fields your DB has
+};
+
+export type Location = {
+  id: string;
+  device_id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  speed?: number | null;
+  // ...
+};
+
+const FETCH_OPTIONS = {
+  // Poll every 2 minutes (120000ms)
+  refetchInterval: 120_000,
+  // When the window regains focus refetch
+  refetchOnWindowFocus: true,
+  // Consider data fresh for 60 seconds (adjust as needed)
+  staleTime: 60_000,
+};
 
 export function useGPSData() {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [gpsData, setGpsData] = useState<GPSData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
+  const devicesQuery = useQuery<Device[]>(
+    ['devices'],
+    async () => {
+      const { data, error } = await supabase
+        .from<Device>('devices')
+        .select('*');
+      if (error) throw error;
+      return data ?? [];
+    },
+    {
+      ...FETCH_OPTIONS,
+      // keep previous data to avoid UI flicker
+      keepPreviousData: true,
+    }
+  );
+
+  const locationsQuery = useQuery<Location[]>(
+    ['locations', { limit: 200 }],
+    async () => {
+      const { data, error } = await supabase
+        .from<Location>('locations')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+    {
+      ...FETCH_OPTIONS,
+      keepPreviousData: true,
+    }
+  );
+
+  const refetch = useCallback(async () => {
+    await Promise.all([devicesQuery.refetch(), locationsQuery.refetch()]);
+  }, [devicesQuery, locationsQuery]);
+
+  // Optional helper to subscribe to real-time changes (Supabase Realtime)
+  // Uncomment and use if you want push updates in addition to polling.
+  /*
   useEffect(() => {
-    if (!user) return;
+    const deviceSub = supabase
+      .from('devices')
+      .on('*', payload => {
+        queryClient.invalidateQueries(['devices']);
+      })
+      .subscribe();
 
-    const gpsRef = ref(database, 'gpsData');
-
-    const unsubscribeGPS = onValue(gpsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const devicesList: Device[] = [];
-        const gpsList: GPSData[] = [];
-
-        // Process each device in gpsData
-        Object.entries(data).forEach(([deviceId, deviceData]: [string, any]) => {
-          const device: Device = {
-            id: deviceId,
-            name: `Device ${deviceId.replace('_', ' ').toUpperCase()}`,
-            imei: deviceId,
-            owner: user.uid,
-            lastSeen: new Date().toISOString(),
-            batteryPercentage: deviceData.batteryLevel || 0,
-            tamperStatus: false,
-            jammingStatus: false,
-            status: 'online' as const,
-            latitude: deviceData.latitude,
-            longitude: deviceData.longitude,
-            speed: 0, // Add speed if available in your data
-          };
-
-          const gpsEntry: GPSData = {
-            id: `${deviceId}_${Date.now()}`,
-            deviceId: deviceId,
-            latitude: deviceData.latitude,
-            longitude: deviceData.longitude,
-            speed: 0,
-            batteryPercentage: deviceData.batteryLevel || 0,
-            timestamp: new Date().toISOString(),
-            status: 'online' as const,
-          };
-
-          devicesList.push(device);
-          gpsList.push(gpsEntry);
-        });
-
-        setDevices(devicesList);
-        setGpsData(gpsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-      } else {
-        setDevices([]);
-        setGpsData([]);
-      }
-      setLoading(false);
-    });
+    const locSub = supabase
+      .from('locations')
+      .on('*', payload => {
+        queryClient.invalidateQueries(['locations']);
+      })
+      .subscribe();
 
     return () => {
-      unsubscribeGPS();
+      supabase.removeSubscription(deviceSub);
+      supabase.removeSubscription(locSub);
     };
-  }, [user]);
-
-  const addDevice = async (device: Omit<Device, 'id'>) => {
-    if (!user) return;
-    
-    const devicesRef = ref(database, `users/${user.uid}/devices`);
-    const newDeviceRef = push(devicesRef);
-    await set(newDeviceRef, device);
-  };
-
-  const updateGPSData = async (data: Omit<GPSData, 'id'>) => {
-    if (!user) return;
-    
-    const gpsRef = ref(database, `users/${user.uid}/gpsData`);
-    const newGPSRef = push(gpsRef);
-    await set(newGPSRef, data);
-
-    // Update device with latest GPS data
-    const deviceRef = ref(database, `users/${user.uid}/devices/${data.deviceId}`);
-    await set(deviceRef, {
-      latitude: data.latitude,
-      longitude: data.longitude,
-      speed: data.speed,
-      batteryPercentage: data.batteryPercentage,
-      lastSeen: data.timestamp,
-      status: data.status,
-    });
-  };
+  }, [queryClient]);
+  */
 
   return {
-    devices,
-    gpsData,
-    loading,
-    addDevice,
-    updateGPSData,
+    devices: devicesQuery.data ?? [],
+    locations: locationsQuery.data ?? [],
+    loading: devicesQuery.isLoading || locationsQuery.isLoading,
+    error: devicesQuery.error || locationsQuery.error,
+    refetch,
+    // pass other query meta if you need
+    devicesQuery,
+    locationsQuery,
   };
 }
