@@ -1,16 +1,6 @@
 import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-// If you already have a Supabase client exported, import it here.
-// Adjust the import path if your client is at a different path.
-import { createClient } from '@supabase/supabase-js';
-// If you have a generated client you prefer, replace the lines below with:
-// import { supabase } from '@/integrations/supabase/client';
-
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-
-// NOTE: For production writes you must use a secure server-side key. This client is for read-only queries in the browser.
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '@/integrations/supabase/client';
 
 export type Device = {
   id: string;
