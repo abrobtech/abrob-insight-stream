@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData } from '@/hooks/useGPSData';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -27,7 +27,7 @@ interface Geofence {
 export default function Geofences() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { devices, loading: gpsLoading } = useGPSData();
+  const { devices, geofences: firebaseGeofences, loading: gpsLoading } = useFirebaseData();
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,57 +38,67 @@ export default function Geofences() {
     on_exit: 'alert'
   });
 
-  // Generate sample geofences based on device locations
+  // Map Firebase geofences to UI format
   useEffect(() => {
     if (!gpsLoading && user) {
-      const generatedGeofences: Geofence[] = [
-        {
-          id: '1',
-          name: 'Home Zone',
+      if (firebaseGeofences.length > 0) {
+        // Use real geofences from Firebase
+        const mappedGeofences: Geofence[] = firebaseGeofences.map((fg) => ({
+          id: fg.id,
+          name: fg.name,
           owner_id: user.uid,
-          polygon: { type: 'polygon', coordinates: [[0, 0]] },
-          active: true,
-          on_enter: 'notify',
-          on_exit: 'alert',
-          created_at: new Date().toISOString(),
-          device_count: devices.filter(d => d.status === 'online').length
-        },
-        {
-          id: '2',
-          name: 'Office Area',
-          owner_id: user.uid,
-          polygon: { type: 'polygon', coordinates: [[0, 0]] },
-          active: true,
-          on_enter: 'log',
+          polygon: {
+            type: fg.type,
+            coordinates: [[fg.lat + 0.001, fg.lon + 0.001], [fg.lat + 0.001, fg.lon - 0.001], [fg.lat - 0.001, fg.lon - 0.001], [fg.lat - 0.001, fg.lon + 0.001]],
+            radius: fg.radius
+          },
+          active: fg.enabled,
+          on_enter: 'alert',
           on_exit: 'notify',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          device_count: Math.floor(devices.length / 2)
-        }
-      ];
-
-      // Add device-specific geofences if devices exist
-      if (devices.length > 0) {
-        devices.forEach((device, index) => {
-          if (index < 2) { // Only add geofences for first 2 devices
-            generatedGeofences.push({
-              id: `device_zone_${device.id}`,
-              name: `${device.name} Safe Zone`,
-              owner_id: user.uid,
-              polygon: { type: 'polygon', coordinates: [[device.latitude || 0, device.longitude || 0]] },
-              active: device.status === 'online',
-              on_enter: 'log',
-              on_exit: 'alert',
-              created_at: new Date(Date.now() - (index * 172800000)).toISOString(),
-              device_count: 1
-            });
+          created_at: new Date().toISOString(),
+          device_count: devices.filter(d => d.id === fg.device_id).length || 1
+        }));
+        setGeofences(mappedGeofences);
+      } else {
+        // Generate sample geofences if no Firebase data
+        const generatedGeofences: Geofence[] = [
+          {
+            id: '1',
+            name: 'Home Zone',
+            owner_id: user.uid,
+            polygon: { type: 'polygon', coordinates: [[0, 0]] },
+            active: true,
+            on_enter: 'notify',
+            on_exit: 'alert',
+            created_at: new Date().toISOString(),
+            device_count: devices.filter(d => d.status === 'online').length
           }
-        });
+        ];
+        
+        // Add device-specific geofences if devices exist
+        if (devices.length > 0) {
+          devices.forEach((device, index) => {
+            if (index < 2) {
+              generatedGeofences.push({
+                id: `device_zone_${device.id}`,
+                name: `${device.name} Safe Zone`,
+                owner_id: user.uid,
+                polygon: { type: 'polygon', coordinates: [[device.latitude || 0, device.longitude || 0]] },
+                active: device.status === 'online',
+                on_enter: 'log',
+                on_exit: 'alert',
+                created_at: new Date(Date.now() - (index * 172800000)).toISOString(),
+                device_count: 1
+              });
+            }
+          });
+        }
+        
+        setGeofences(generatedGeofences);
       }
-
-      setGeofences(generatedGeofences);
       setLoading(false);
     }
-  }, [devices, gpsLoading, user]);
+  }, [devices, firebaseGeofences, gpsLoading, user]);
 
   const handleToggleActive = (geofenceId: string) => {
     setGeofences(prev => prev.map(geo => 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData } from '@/hooks/useGPSData';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -30,7 +30,7 @@ interface Trip {
 export default function History() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { devices, locations, loading: gpsLoading } = useGPSData();
+  const { devices, locations, loading: gpsLoading } = useFirebaseData();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('all');
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);

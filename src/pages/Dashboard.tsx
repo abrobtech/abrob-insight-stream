@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData, Device } from '@/hooks/useGPSData';
+import { useFirebaseData, Device } from '@/hooks/useFirebaseData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Map from '@/components/dashboard/Map';
@@ -13,7 +13,7 @@ import { Activity, Battery, Shield, MapPin } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { devices, locations, loading } = useGPSData();
+  const { devices, locations, loading } = useFirebaseData();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);

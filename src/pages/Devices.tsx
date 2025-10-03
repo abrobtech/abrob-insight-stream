@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData } from '@/hooks/useGPSData';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import DeviceDetails from '@/components/devices/DeviceDetails';
@@ -18,7 +18,7 @@ export default function Devices() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { devices, loading } = useGPSData();
+  const { devices, loading } = useFirebaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

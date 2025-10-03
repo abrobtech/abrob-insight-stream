@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
-import { useGPSData } from '@/hooks/useGPSData';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card } from '@/components/ui/card';
@@ -25,7 +25,7 @@ const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export default function Patterns() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { devices, locations, loading: gpsLoading } = useGPSData();
+  const { devices, locations, loading: gpsLoading } = useFirebaseData();
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
