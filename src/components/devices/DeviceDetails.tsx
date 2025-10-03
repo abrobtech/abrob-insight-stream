@@ -129,7 +129,7 @@ export default function DeviceDetails({ device, open, onClose }: DeviceDetailsPr
                     <User className="w-4 h-4" />
                     <span className="text-sm">Owner</span>
                   </div>
-                  <span className="text-sm">{device.owner}</span>
+                  <span className="text-sm">{device.owner_id || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">

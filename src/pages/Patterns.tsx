@@ -25,7 +25,7 @@ const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export default function Patterns() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { devices, gpsData, loading: gpsLoading } = useGPSData();
+  const { devices, locations, loading: gpsLoading } = useGPSData();
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -78,7 +78,7 @@ export default function Patterns() {
       setPatterns(generatedPatterns);
       setLoading(false);
     }
-  }, [devices, gpsData, gpsLoading]);
+  }, [devices, locations, gpsLoading]);
 
   const getAnomalyColor = (score: number) => {
     if (score < 0.3) return 'text-green-600';

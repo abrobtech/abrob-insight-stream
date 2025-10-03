@@ -13,7 +13,7 @@ import { Activity, Battery, Shield, MapPin } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { devices, gpsData, loading } = useGPSData();
+  const { devices, locations, loading } = useGPSData();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);

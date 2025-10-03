@@ -50,38 +50,31 @@ const FETCH_OPTIONS = {
 export function useGPSData() {
   const queryClient = useQueryClient();
 
-  const devicesQuery = useQuery<Device[]>(
-    ['devices'],
-    async () => {
+  const devicesQuery = useQuery({
+    queryKey: ['devices'],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from<Device>('devices')
+        .from('devices')
         .select('*');
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Device[];
     },
-    {
-      ...FETCH_OPTIONS,
-      // keep previous data to avoid UI flicker
-      keepPreviousData: true,
-    }
-  );
+    ...FETCH_OPTIONS,
+  });
 
-  const locationsQuery = useQuery<Location[]>(
-    ['locations', { limit: 200 }],
-    async () => {
+  const locationsQuery = useQuery({
+    queryKey: ['locations', { limit: 200 }],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from<Location>('locations')
+        .from('locations')
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(200);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Location[];
     },
-    {
-      ...FETCH_OPTIONS,
-      keepPreviousData: true,
-    }
-  );
+    ...FETCH_OPTIONS,
+  });
 
   const refetch = useCallback(async () => {
     await Promise.all([devicesQuery.refetch(), locationsQuery.refetch()]);

@@ -30,7 +30,7 @@ interface Trip {
 export default function History() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { devices, gpsData, loading: gpsLoading } = useGPSData();
+  const { devices, locations, loading: gpsLoading } = useGPSData();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('all');
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
@@ -72,7 +72,7 @@ export default function History() {
       setTrips(generatedTrips);
       setLoading(false);
     }
-  }, [devices, gpsData, gpsLoading]);
+  }, [devices, locations, gpsLoading]);
 
   // Create device options for dropdown
   const deviceOptions = [
