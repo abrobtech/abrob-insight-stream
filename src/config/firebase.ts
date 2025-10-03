@@ -5,7 +5,7 @@ import { getDatabase } from 'firebase/database';
 const firebaseConfig = {
   apiKey: "AIzaSyB5nXV5nGM0I3c9P7pAjJoeWJ9TctXHp_k",
   authDomain: "abrob-gt1.firebaseapp.com",
-  databaseURL: "https://studio-1007817151-84994-default-rtdb.firebaseio.com/",
+  databaseURL: "https://abrob-gt1-default-rtdb.firebaseio.com/",
   projectId: "abrob-gt1",
   storageBucket: "abrob-gt1.firebasestorage.app",
   messagingSenderId: "339885770339",
